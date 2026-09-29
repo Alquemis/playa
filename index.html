@@ -49,6 +49,8 @@
   }
   .verify-btn:hover { background:#143c5a; }
   .verify-btn:disabled { background:#9ca3af; cursor:not-allowed; }
+  .verify-btn.verified { background:#16a34a; }
+  .verify-btn.verified:hover { background:#16a34a; }
   .lugar-grid { display:grid; grid-template-columns:1fr; gap:10px; }
   .lugar-opt {
     display:flex; align-items:center; gap:12px; border:1.5px solid rgba(255,255,255,.4); border-radius:12px;
@@ -159,6 +161,7 @@
         <ul class="comunicado-list">
           <li>Se debe mantener un comportamiento respetuoso durante todo el trayecto, tanto de ida como de regreso.</li>
           <li>No se permitirá abordar el bus, ni continuar en él, a personas en evidente estado de embriaguez que pongan en riesgo la seguridad o el bienestar del resto de los pasajeros.</li>
+          <li>No se permite ingresar al bus con ningún tipo de bebida, botellas ni latas; los vasos deben estar vacíos. Esto aplica tanto en la ida como en el regreso.</li>
           <li>En caso de vómito, derrames de líquidos u otros daños ocasionados al bus por el estado de un colaborador, el costo de limpieza y/o reparación será asumido por la persona responsable del daño.</li>
           <li>Se debe permanecer sentado y seguir en todo momento las indicaciones del conductor mientras el bus esté en movimiento.</li>
           <li>Se solicita mantener el orden y la limpieza dentro del bus durante todo el recorrido.</li>
@@ -223,6 +226,10 @@
             <div class="dot"></div>
             <div><div class="txt">Transporte propio</div><div class="sub">Llego por mis propios medios</div></div>
           </div>
+          <div class="lugar-opt" data-val="No asistiré" onclick="selectLugar('No asistiré')">
+            <div class="dot"></div>
+            <div><div class="txt">No asistiré</div><div class="sub">Por si cambias de opinión, puedes actualizar tu respuesta</div></div>
+          </div>
         </div>
       </div>
 
@@ -282,6 +289,7 @@ function resetVerification() {
   document.getElementById('f-nombre').value = '';
   const btn = document.getElementById('verify-btn');
   btn.disabled = false; btn.textContent = 'Verificar';
+  btn.classList.remove('verified');
 }
 
 async function doVerifyCedula() {
@@ -307,6 +315,7 @@ async function doVerifyCedula() {
     document.getElementById('submit-btn').style.display       = 'block';
     statusEl.textContent = '';
     btn.textContent = 'Verificado ✓';
+    btn.classList.add('verified');
 
     // Si esta cédula ya había confirmado antes, se precargan sus datos
     // (teléfono y lugar de salida) para que solo edite lo que cambió.
@@ -394,10 +403,13 @@ async function submitRsvp() {
   if (error) { showMsg('No se pudo guardar tu confirmación: ' + error.message, false); return; }
 
   document.getElementById('form-msg').classList.remove('show');
-  document.getElementById('success-title').textContent = yaExistia ? '¡Confirmación actualizada!' : '¡Asistencia confirmada!';
-  document.getElementById('success-sub').textContent = yaExistia
-    ? 'Actualizamos tus datos correctamente.'
-    : 'Gracias por confirmar. Nos vemos en la playa 🏖️';
+  const noAsiste = _selectedLugar === 'No asistiré';
+  document.getElementById('success-title').textContent = noAsiste
+    ? 'Respuesta registrada'
+    : (yaExistia ? '¡Confirmación actualizada!' : '¡Asistencia confirmada!');
+  document.getElementById('success-sub').textContent = noAsiste
+    ? 'Gracias por avisarnos. Si cambias de opinión, puedes volver a llenar el formulario antes del plazo.'
+    : (yaExistia ? 'Actualizamos tus datos correctamente.' : 'Gracias por confirmar. Nos vemos en la playa 🏖️');
   document.getElementById('rsvp-form').style.display = 'none';
   document.getElementById('success-wrap').classList.add('show');
 }

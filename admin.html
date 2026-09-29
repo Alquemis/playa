@@ -59,6 +59,7 @@
   .lugar-heredia { background:#dbeafe; color:#1e40af; }
   .lugar-tresrios { background:#fef3c7; color:#92400e; }
   .lugar-propio { background:#f3f4f6; color:#374151; }
+  .lugar-no { background:#fee2e2; color:#991b1b; }
 
   .row-actions { display:flex; gap:6px; }
   tr.main-row { cursor:pointer; }
@@ -121,6 +122,10 @@
       <div class="stat-card">
         <div class="stat-value" id="stat-propio">—</div>
         <div class="stat-label">Transporte propio</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-no">—</div>
+        <div class="stat-label">No asistirán</div>
       </div>
     </div>
 
@@ -225,6 +230,7 @@ function esc(s) {
 function lugarChip(lugar) {
   if (lugar === 'Heredia')  return '<span class="lugar-chip lugar-heredia">Heredia</span>';
   if (lugar === 'Tres Ríos') return '<span class="lugar-chip lugar-tresrios">Tres Ríos</span>';
+  if (lugar === 'No asistiré') return '<span class="lugar-chip lugar-no">No asistirá</span>';
   return '<span class="lugar-chip lugar-propio">Transporte propio</span>';
 }
 
@@ -249,6 +255,7 @@ function updateStats() {
   document.getElementById('stat-heredia').textContent   = allRows.filter(r => r.lugar_salida === 'Heredia').length;
   document.getElementById('stat-tresrios').textContent  = allRows.filter(r => r.lugar_salida === 'Tres Ríos').length;
   document.getElementById('stat-propio').textContent    = allRows.filter(r => r.lugar_salida === 'Transporte propio').length;
+  document.getElementById('stat-no').textContent        = allRows.filter(r => r.lugar_salida === 'No asistiré').length;
 }
 
 function filterList() {
