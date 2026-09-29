@@ -89,6 +89,12 @@
   .comunicado-divider { border:none; border-top:1px solid #d1d5db; margin:14px 0; }
   .comunicado-h { font-size:13px; font-weight:700; margin-bottom:6px; color:#143c5a; text-decoration:underline; }
   .comunicado-h-bold { font-size:13px; font-weight:800; margin:14px 0 6px; color:#143c5a; }
+  .warn-modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,.6); display:none; align-items:center; justify-content:center; z-index:3000; padding:20px; }
+  .warn-modal-overlay.show { display:flex; }
+  .warn-modal-card { background:#fff; border-radius:16px; padding:28px 24px; max-width:340px; width:100%; text-align:center; box-shadow:0 25px 60px rgba(0,0,0,.35); }
+  .warn-modal-icon { font-size:34px; margin-bottom:10px; }
+  .warn-modal-title { font-size:16px; font-weight:800; color:#143c5a; margin-bottom:8px; line-height:1.4; }
+  .warn-modal-sub { font-size:13px; color:#6b7280; line-height:1.5; margin-bottom:20px; }
   .comunicado-list { padding-left:20px; margin-bottom:10px; font-size:12.3px; line-height:1.55; color:#374151; }
   .comunicado-list li { margin-bottom:5px; }
   .comunicado-bold { font-weight:700; font-size:12.5px; line-height:1.5; margin:12px 0; color:#1f2937; }
@@ -128,7 +134,7 @@
     <!-- FORMULARIO -->
     <!-- COMUNICADO -->
     <div class="comunicado-wrap" id="comunicado-wrap">
-      <div class="comunicado-box">
+      <div class="comunicado-box" id="comunicado-box">
         <div class="comunicado-title">Comunicado General</div>
         <div class="comunicado-subtitle">Hotel Fiesta Resort, el Roble de Puntarenas</div>
         <p class="comunicado-italic">Tenemos el agrado de invitarlos a disfrutar de una experiencia diferente y única, para celebrar el cierre de un gran año laboral para nuestra empresa. Queremos agradecer y premiar todo su esfuerzo y compromiso en el cumplimiento de sus funciones.</p>
@@ -170,7 +176,17 @@
 
         <p class="comunicado-bold comunicado-center">Finalmente, les recordamos que vamos en representación de la Empresa, por lo que debemos tener un buen comportamiento y dejar una buena imagen en el hotel para tener la posibilidad de regresar.</p>
       </div>
-      <button type="button" class="submit-btn" onclick="acceptComunicado()">Entendido, continuar</button>
+      <button type="button" class="submit-btn" onclick="acceptComunicado()">Acepto que he leído el comunicado, continuar</button>
+    </div>
+
+    <!-- AVISO: falta terminar de leer el comunicado -->
+    <div class="warn-modal-overlay" id="scroll-warn-modal">
+      <div class="warn-modal-card">
+        <div class="warn-modal-icon">📜</div>
+        <div class="warn-modal-title">Debes leer el comunicado hasta el final</div>
+        <div class="warn-modal-sub">Desplázate hasta el final del comunicado para poder continuar.</div>
+        <button type="button" class="submit-btn" onclick="closeScrollWarn()">Entendido</button>
+      </div>
     </div>
 
     <form id="rsvp-form" onsubmit="return false;" style="display:none;">
@@ -320,9 +336,33 @@ function showForm() {
   document.getElementById('rsvp-form').style.display = 'block';
 }
 
+// El botón solo continúa si la persona hizo scroll hasta el final del
+// comunicado (o si el texto completo ya cabía sin necesidad de scroll).
+let _comunicadoScrolledEnd = false;
+(function initComunicadoScroll() {
+  const box = document.getElementById('comunicado-box');
+  if (!box) return;
+  const checkEnd = () => {
+    if (box.scrollTop + box.clientHeight >= box.scrollHeight - 8) _comunicadoScrolledEnd = true;
+  };
+  box.addEventListener('scroll', checkEnd);
+  checkEnd();
+})();
+
 function acceptComunicado() {
+  const box = document.getElementById('comunicado-box');
+  const yaLeyoTodo = _comunicadoScrolledEnd ||
+    (box && box.scrollTop + box.clientHeight >= box.scrollHeight - 8);
+  if (!yaLeyoTodo) {
+    document.getElementById('scroll-warn-modal').classList.add('show');
+    return;
+  }
   document.getElementById('comunicado-wrap').style.display = 'none';
   document.getElementById('rsvp-form').style.display = 'block';
+}
+
+function closeScrollWarn() {
+  document.getElementById('scroll-warn-modal').classList.remove('show');
 }
 
 async function submitRsvp() {

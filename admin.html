@@ -64,7 +64,7 @@
   tr.main-row { cursor:pointer; }
   tr.main-row:hover { background:#f9fafb; }
   thead th:nth-child(1), tr.main-row td:nth-child(1) { padding-right:48px; }
-  thead th:nth-child(2), tr.main-row td:nth-child(2) { padding-right:48px; }
+  thead th:nth-child(2), tr.main-row td:nth-child(2) { padding-right:48px; padding-left:36px; }
   tr.detail-row.hidden { display:none; }
   tr.detail-row td { background:#f9fafb; padding:10px 16px 14px; font-size:12.5px; color:#6b7280; border-bottom:1px solid #f3f4f6; }
   tr.detail-row .detail-item { display:inline-block; margin-right:18px; }
@@ -100,7 +100,6 @@
 
 <div class="topbar">
   <div class="topbar-title">🏖️ Asistencia — Viaje a la playa</div>
-  <div class="topbar-sub">Martimac Distribuidora · Panel de solo lectura, sin inicio de sesión</div>
 </div>
 
 <div class="container">
@@ -379,7 +378,7 @@ function exportCsv() {
 }
 
 // ── QR ── URL fija del formulario ya publicado en GitHub Pages.
-const FORM_URL = 'https://alquemis.github.io/cat/playa.html';
+const FORM_URL = 'https://alquemis.github.io/playa/';
 (function renderQr() {
   document.getElementById('qr-url').textContent = FORM_URL;
   new QRCode(document.getElementById('qr-holder'), {
