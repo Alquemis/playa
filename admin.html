@@ -66,8 +66,8 @@
   .row-actions { display:flex; gap:6px; }
   tr.main-row { cursor:pointer; }
   tr.main-row:hover { background:#f9fafb; }
-  thead th:nth-child(1), tr.main-row td:nth-child(1) { padding-right:48px; }
-  tr.main-row td:nth-child(1) { font-size:11.5px; white-space:nowrap; }
+  thead th:nth-child(1), tr.main-row td:nth-child(1) { padding-right:24px; }
+  tr.main-row td:nth-child(1) { font-size:10px; white-space:nowrap; }
   thead th:nth-child(2), tr.main-row td:nth-child(2) { padding-right:16px; padding-left:36px; }
   thead th:nth-child(3), tr.main-row td:nth-child(3) { width:1%; white-space:nowrap; padding-left:8px; padding-right:12px; padding-top:4px; padding-bottom:4px; }
   tr.detail-row.hidden { display:none; }
@@ -107,7 +107,7 @@
   <div class="topbar-title">🏖️ Asistencia — Viaje a la playa</div>
 </div>
 
-<div class="container">
+<div class="container" id="zoom-root">
 
   <div class="top-grid">
     <div class="stat-grid">
@@ -341,10 +341,19 @@ startRealtime();
 
 // ── VIEWPORT ZOOM — pantallas angostas: en vez de recortar el nombre o
 // generar scroll horizontal, se mide el ancho real que necesita la tabla
-// (incluyendo el nombre completo) y se achica toda la página lo justo para
+// (incluyendo el nombre completo) y se achica el contenedor lo justo para
 // que quepa. Se recalcula cada vez que cambia el contenido de la tabla.
+//
+// Usa transform:scale() sobre #zoom-root en vez de la propiedad CSS "zoom":
+// zoom tiene soporte inconsistente (sobre todo en navegadores móviles) y en
+// algunos casos no recalculaba bien el ancho disponible, dejando la columna
+// de Acciones cortada. transform:scale() es más predecible entre navegadores.
 function applyZoom() {
-  document.documentElement.style.zoom = '';
+  const root = document.getElementById('zoom-root');
+  if (!root) return;
+  root.style.transform = '';
+  root.style.width = '';
+  root.style.marginBottom = '';
   requestAnimationFrame(() => {
     // .table-wrap tiene overflow:hidden, así que por defecto NO deja ver
     // cuánto ancho necesita realmente la tabla (el navegador la recorta en
@@ -353,11 +362,20 @@ function applyZoom() {
     const wrap = document.querySelector('.table-wrap');
     const prevOverflow = wrap ? wrap.style.overflow : '';
     if (wrap) wrap.style.overflow = 'visible';
-    const neededWidth = document.body.scrollWidth;
+    const neededWidth = root.scrollWidth;
+    const neededHeight = root.scrollHeight;
     if (wrap) wrap.style.overflow = prevOverflow;
 
     const vw = window.innerWidth;
-    document.documentElement.style.zoom = neededWidth > vw ? (vw / neededWidth).toFixed(4) : '';
+    if (neededWidth > vw) {
+      const scale = vw / neededWidth;
+      root.style.transformOrigin = 'top left';
+      root.style.transform = 'scale(' + scale.toFixed(4) + ')';
+      // El transform no libera el espacio que el contenido ocupaba sin
+      // escalar: se compensa con un margen negativo para no dejar hueco.
+      root.style.width = neededWidth + 'px';
+      root.style.marginBottom = (neededHeight * scale - neededHeight) + 'px';
+    }
   });
 }
 window.addEventListener('resize', applyZoom);
