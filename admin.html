@@ -7,6 +7,7 @@
 <title>Asistencia — Viaje a la playa | Martimac</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
@@ -48,8 +49,8 @@
   .btn-ghost { background:#f3f4f6; color:#374151; border:1.5px solid #e5e7eb; }
   .btn-ghost:hover { background:#e5e7eb; }
 
-  .table-wrap { background:#fff; border-radius:14px; border:1px solid #e5e7eb; overflow:hidden; overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; min-width:640px; }
+  .table-wrap { background:#fff; border-radius:14px; border:1px solid #e5e7eb; overflow:hidden; }
+  table { width:100%; border-collapse:collapse; table-layout:auto; }
   thead th { background:#f9fafb; padding:12px 16px; font-size:12px; font-weight:700; color:#6b7280; text-align:left; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid #e5e7eb; white-space:nowrap; }
   tbody td { padding:13px 16px; font-size:14px; color:#374151; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
   tbody tr:last-child td { border-bottom:none; }
@@ -59,13 +60,14 @@
   .lugar-heredia { background:#dbeafe; color:#1e40af; }
   .lugar-tresrios { background:#fef3c7; color:#92400e; }
   .lugar-propio { background:#f3f4f6; color:#374151; }
-  .lugar-no { background:#fee2e2; color:#991b1b; }
 
   .row-actions { display:flex; gap:6px; }
   tr.main-row { cursor:pointer; }
   tr.main-row:hover { background:#f9fafb; }
   thead th:nth-child(1), tr.main-row td:nth-child(1) { padding-right:48px; }
+  tr.main-row td:nth-child(1) { font-size:12.5px; }
   thead th:nth-child(2), tr.main-row td:nth-child(2) { padding-right:48px; padding-left:36px; }
+  thead th:nth-child(3), tr.main-row td:nth-child(3) { width:1%; white-space:nowrap; padding-left:8px; padding-right:12px; }
   tr.detail-row.hidden { display:none; }
   tr.detail-row td { background:#f9fafb; padding:10px 16px 14px; font-size:12.5px; color:#6b7280; border-bottom:1px solid #f3f4f6; }
   tr.detail-row .detail-item { display:inline-block; margin-right:18px; }
@@ -123,10 +125,6 @@
         <div class="stat-value" id="stat-propio">—</div>
         <div class="stat-label">Transporte propio</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-no">—</div>
-        <div class="stat-label">No asistirán</div>
-      </div>
     </div>
 
     <div class="qr-card">
@@ -142,14 +140,15 @@
       <input type="text" id="search" placeholder="Buscar" oninput="filterList()">
     </div>
     <button class="btn btn-ghost" onclick="loadList()">↻ Actualizar</button>
-    <button class="btn btn-dark" onclick="exportCsv()">⬇ Exportar CSV</button>
+    <button class="btn btn-ghost" id="toggle-edit-btn" onclick="toggleModifyMode()">✏️ Editar</button>
+    <button class="btn btn-dark" onclick="exportExcel()">⬇ Exportar Excel</button>
   </div>
 
   <div class="table-wrap">
     <table>
       <thead><tr>
         <th>Nombre</th>
-        <th>Lugar de salida</th>
+        <th>Salida</th>
         <th></th>
       </tr></thead>
       <tbody id="list-tbody">
@@ -158,38 +157,6 @@
     </table>
   </div>
 
-</div>
-
-<!-- MODAL EDITAR -->
-<div class="modal-overlay" id="edit-modal">
-  <div class="modal-card">
-    <h3>Editar confirmación</h3>
-    <div class="modal-field">
-      <label>Nombre completo</label>
-      <input type="text" id="edit-nombre">
-    </div>
-    <div class="modal-field">
-      <label>Cédula</label>
-      <input type="text" id="edit-cedula">
-    </div>
-    <div class="modal-field">
-      <label>Teléfono</label>
-      <input type="text" id="edit-telefono">
-    </div>
-    <div class="modal-field">
-      <label>Lugar de salida</label>
-      <select id="edit-lugar">
-        <option value="Heredia">Heredia</option>
-        <option value="Tres Ríos">Tres Ríos</option>
-        <option value="Transporte propio">Transporte propio</option>
-      </select>
-    </div>
-    <div id="edit-msg" style="display:none;font-size:12.5px;color:#dc2626;margin-top:-6px;margin-bottom:10px;"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeEditModal()">Cancelar</button>
-      <button class="btn btn-dark" id="edit-save-btn" onclick="saveEdit()">Guardar cambios</button>
-    </div>
-  </div>
 </div>
 
 <!-- MODAL ELIMINAR -->
@@ -230,7 +197,6 @@ function esc(s) {
 function lugarChip(lugar) {
   if (lugar === 'Heredia')  return '<span class="lugar-chip lugar-heredia">Heredia</span>';
   if (lugar === 'Tres Ríos') return '<span class="lugar-chip lugar-tresrios">Tres Ríos</span>';
-  if (lugar === 'No asistiré') return '<span class="lugar-chip lugar-no">No asistirá</span>';
   return '<span class="lugar-chip lugar-propio">Transporte propio</span>';
 }
 
@@ -255,7 +221,6 @@ function updateStats() {
   document.getElementById('stat-heredia').textContent   = allRows.filter(r => r.lugar_salida === 'Heredia').length;
   document.getElementById('stat-tresrios').textContent  = allRows.filter(r => r.lugar_salida === 'Tres Ríos').length;
   document.getElementById('stat-propio').textContent    = allRows.filter(r => r.lugar_salida === 'Transporte propio').length;
-  document.getElementById('stat-no').textContent        = allRows.filter(r => r.lugar_salida === 'No asistiré').length;
 }
 
 function filterList() {
@@ -274,13 +239,13 @@ function renderList(list) {
   }
   tbody.innerHTML = list.map(r => {
     const fecha = r.created_at ? new Date(r.created_at).toLocaleDateString('es-CR', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+    const trashBtn = _modifyMode
+      ? '<button class="btn-icon danger" title="Eliminar" onclick="openDeleteConfirm(' + r.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>'
+      : '';
     return '<tr class="main-row" onclick="toggleRowDetail(' + r.id + ')">' +
       '<td>' + esc(r.nombre||'—') + '</td>' +
       '<td>' + lugarChip(r.lugar_salida) + '</td>' +
-      '<td><div class="row-actions" onclick="event.stopPropagation()">' +
-        '<button class="btn-icon" title="Editar" onclick="openEditModal(' + r.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>' +
-        '<button class="btn-icon danger" title="Eliminar" onclick="openDeleteConfirm(' + r.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>' +
-      '</div></td>' +
+      '<td><div class="row-actions" onclick="event.stopPropagation()">' + trashBtn + '</div></td>' +
     '</tr>' +
     '<tr class="detail-row hidden" id="detail-' + r.id + '">' +
       '<td colspan="3">' +
@@ -292,51 +257,13 @@ function renderList(list) {
   }).join('');
 }
 
-// ── EDITAR ────────────────────────────────────────────────────
-let _editingId = null;
-function openEditModal(id) {
-  const r = allRows.find(x => x.id === id);
-  if (!r) return;
-  _editingId = id;
-  document.getElementById('edit-nombre').value   = r.nombre || '';
-  document.getElementById('edit-cedula').value   = r.cedula || '';
-  document.getElementById('edit-telefono').value = r.telefono || '';
-  document.getElementById('edit-lugar').value    = r.lugar_salida || 'Heredia';
-  document.getElementById('edit-msg').style.display = 'none';
-  document.getElementById('edit-modal').classList.add('show');
-}
-function closeEditModal() {
-  document.getElementById('edit-modal').classList.remove('show');
-  _editingId = null;
-}
-async function saveEdit() {
-  if (!_editingId) return;
-  const nombre   = document.getElementById('edit-nombre').value.trim();
-  const cedula   = document.getElementById('edit-cedula').value.trim();
-  const telefono = document.getElementById('edit-telefono').value.trim();
-  const lugar    = document.getElementById('edit-lugar').value;
-  const msg = document.getElementById('edit-msg');
-
-  if (!nombre || !cedula || !telefono) {
-    msg.textContent = 'Completa nombre, cédula y teléfono.';
-    msg.style.display = 'block';
-    return;
-  }
-
-  const btn = document.getElementById('edit-save-btn');
-  btn.disabled = true; btn.textContent = 'Guardando…';
-  const { error } = await sb.from('viaje_playa_rsvp').update({
-    nombre, cedula, telefono, lugar_salida: lugar, updated_at: new Date().toISOString()
-  }).eq('id', _editingId);
-  btn.disabled = false; btn.textContent = 'Guardar cambios';
-
-  if (error) {
-    msg.textContent = 'Error al guardar: ' + error.message;
-    msg.style.display = 'block';
-    return;
-  }
-  closeEditModal();
-  loadList(true);
+// ── MODO EDITAR (activa la papelera por fila) ──────────────────
+let _modifyMode = false;
+function toggleModifyMode() {
+  _modifyMode = !_modifyMode;
+  const btn = document.getElementById('toggle-edit-btn');
+  btn.textContent = _modifyMode ? '✓ Listo' : '✏️ Editar';
+  filterList();
 }
 
 // ── ELIMINAR ──────────────────────────────────────────────────
@@ -364,24 +291,18 @@ async function confirmDelete() {
   loadList(true);
 }
 
-function exportCsv() {
+function exportExcel() {
   if (!allRows.length) return;
-  const header = ['Nombre','Cédula','Teléfono','Lugar de salida','Confirmado el'];
-  const lines = allRows.map(r => {
+  const header = ['Nombre','Cédula','Teléfono','Salida','Confirmado el'];
+  const rows = allRows.map(r => {
     const fecha = r.created_at ? new Date(r.created_at).toLocaleString('es-CR') : '';
-    return [r.nombre, r.cedula, r.telefono, r.lugar_salida, fecha]
-      .map(v => '"' + String(v||'').replace(/"/g,'""') + '"').join(',');
+    return [r.nombre||'', r.cedula||'', r.telefono||'', r.lugar_salida||'', fecha];
   });
-  const csv = '﻿' + [header.join(','), ...lines].join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'asistencia_viaje_playa.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [{ wch:28 }, { wch:14 }, { wch:14 }, { wch:18 }, { wch:20 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
+  XLSX.writeFile(wb, 'asistencia_viaje_playa.xlsx');
 }
 
 // ── QR ── URL fija del formulario ya publicado en GitHub Pages.
@@ -410,6 +331,22 @@ function startRealtime() {
 
 loadList();
 startRealtime();
+
+// ── VIEWPORT ZOOM — pantallas angostas: se achica todo en vez de generar
+// scroll horizontal, así las 3 columnas de la tabla siempre quedan visibles.
+(function() {
+  var DESIGN_W = 480;
+  function applyZoom() {
+    var vw = window.innerWidth;
+    if (vw < DESIGN_W) {
+      document.documentElement.style.zoom = (vw / DESIGN_W).toFixed(4);
+    } else {
+      document.documentElement.style.zoom = '';
+    }
+  }
+  window.addEventListener('resize', applyZoom);
+  applyZoom();
+})();
 </script>
 
 </body>

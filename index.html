@@ -212,7 +212,7 @@
         <input type="tel" id="f-telefono" placeholder="Número de teléfono" inputmode="tel" autocomplete="tel">
       </div>
       <div class="field" id="lugar-field" style="display:none;">
-        <label>Lugar de salida</label>
+        <label>Salida</label>
         <div class="lugar-grid" id="lugar-grid">
           <div class="lugar-opt" data-val="Heredia" onclick="selectLugar('Heredia')">
             <div class="dot"></div>
@@ -392,11 +392,18 @@ async function submitRsvp() {
     .select('id').eq('cedula', cedula).limit(1);
   const yaExistia = existente && existente.length > 0;
 
-  const { error } = await sb.from('viaje_playa_rsvp').upsert({
-    nombre, cedula, telefono,
-    lugar_salida: _selectedLugar,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'cedula' });
+  let error;
+  if (_selectedLugar === 'No asistiré') {
+    // Si cambia de decisión y no va, se borra por completo de la lista de
+    // asistencia (no tiene sentido mantenerla ahí con un estado "no asiste").
+    ({ error } = await sb.from('viaje_playa_rsvp').delete().eq('cedula', cedula));
+  } else {
+    ({ error } = await sb.from('viaje_playa_rsvp').upsert({
+      nombre, cedula, telefono,
+      lugar_salida: _selectedLugar,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'cedula' }));
+  }
 
   btn.disabled = false; btn.textContent = 'Confirmar asistencia';
 
